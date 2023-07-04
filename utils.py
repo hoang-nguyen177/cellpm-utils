@@ -42,7 +42,7 @@ def main():
     parser.add_argument("--sleep", dest="sleep", default=20, help="sleep time in seconds")
     parser.add_argument("-o", "--output-file", dest="output", default='output.txt', required=True, help="output file name", metavar="FILE")
     parser.add_argument("-e", "--error-file", dest="error", default='error.txt', required=True, help="error file name", metavar="FILE")
-    
+
 
     args = parser.parse_args()
 
