@@ -38,11 +38,10 @@ def main():
     parser.add_argument("--ph", dest="ph", default=7, required=True, help="ph")
     parser.add_argument("--membrane-type", dest="membranetype", default='DOPC', required=True, help="membraneType")
     parser.add_argument("--temperature", dest="temperature", default=300, required=True, help="temperature")
-    parser.add_argument("--batch-size", dest="batchsize", default=2, help="size of batches")
-    parser.add_argument("--sleep", dest="sleep", default=10, help="sleep time between batches")
+    # parser.add_argument("--batch-size", dest="batchsize", default=2, help="size of batches")
+    parser.add_argument("--sleep", dest="sleep", default=20, help="sleep time in seconds")
     parser.add_argument("-o", "--output-file", dest="output", default='output.txt', required=True, help="output file name", metavar="FILE")
     parser.add_argument("-e", "--error-file", dest="error", default='error.txt', required=True, help="error file name", metavar="FILE")
-    parser.add_argument("--submit-only", dest="submit", default=False, help="temperature")
     
 
     args = parser.parse_args()
@@ -58,9 +57,8 @@ def main():
     errorf = open(args.error, 'w')
     errorf.write(f"File, type, code, url, message\n")
     resultsf = open("results.txt", 'w')
-    resultsf.write(f"File, ResultUrl\n")
+    resultsf.write(f"File, ResultUrl, Status\n") # status =1 success, 0 fail
     results = {}
-    file_count_in_batch = 0
     with open(args.input, "r") as inputf:
         line = inputf.readline()
         while line != '':
@@ -72,40 +70,35 @@ def main():
                     resp_json = json.loads(resp.text)
                     if resp.status_code == 200:
                         logging.info(f"file={line} success response={resp_json['message']} resultUrl={resp_json['resultsUrl']}")
-                        resultsf.write(f"{line}, {resp_json['resultsUrl']}\n")
+                        resultsf.write(f"{line}, {resp_json['resultsUrl']}, 1\n")
                         results[line] = resp_json['resultsUrl']
                         time.sleep(1)
                     else:
                         # fail
+                        resultsf.write(f"{line}, {resp_json['resultsUrl']}, 0\n")
                         errorf.write(f"{line}, submission, {resp.status_code}, {url}, {resp_json['message']}\n")
                 except Exception as e:
                     logging.error(f"Error: {e}")
             else:
                 logging.info(f"File={line} does not exist")
-            file_count_in_batch += 1
-            # if file_count_in_batch > args.batchsize:
-            #     time.sleep(args.sleep)
-            #     file_count_in_batch = 0
             line = inputf.readline()
-    resultsf.close()
     logging.info("Sleep to let server to run")
-    time.sleep(20)
-    if not args.submit:
-        for line in results:
-            # success
-            result_resp = get_result(results[line])
-            if result_resp.status_code == 200:
-                # start parsing text
-                occurrences = re.findall(r'Log of permeability coefficient=.*\w+', result_resp.text)
-                logging.info(f"Processing {line}. Occurences: {occurrences}")
-                if len(occurrences) > 0:
-                    value = occurrences[0].split("=")[1].strip()
-                    outputf.write(f"{line},{value}\n")
-            else:
-                logging.error(f">>>>{line} Failed , {result_resp.status_code}, {result_resp.text}")
-                errorf.write(f"{line}, result, {result_resp.status_code}, {resp_json['resultsUrl']}, {result_resp.text}\n")
-        logging.info(f">>>>Results written to {args.output} Errors written to {args.error}")
-   
+    time.sleep(args.sleep)
+    for line in results:
+        # success
+        result_resp = get_result(results[line])
+        if result_resp.status_code == 200:
+            # start parsing text
+            occurrences = re.findall(r'Log of permeability coefficient=.*\w+', result_resp.text)
+            logging.info(f"Processing {line}. Occurences: {occurrences}")
+            if len(occurrences) > 0:
+                value = occurrences[0].split("=")[1].strip()
+                outputf.write(f"{line},{value}\n")
+        else:
+            logging.error(f">>>>{line} Failed , {result_resp.status_code}, {result_resp.text}")
+            errorf.write(f"{line}, result, {result_resp.status_code}, {resp_json['resultsUrl']}, {result_resp.text}\n")
+    logging.info(f">>>>Results written to {args.output} Errors written to {args.error}")
+    resultsf.close()
     outputf.close()
     errorf.close()
  
