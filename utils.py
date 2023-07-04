@@ -7,10 +7,9 @@ import time
 
 logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
-url = "https://cgopm.cc.lehigh.edu/cellpm"
 
 
-def request(filepath, membranetype, temp, ph):
+def request(url, filepath, membranetype, temp, ph):
     payload={
         "membraneType": membranetype,
         "temperature": temp,
@@ -36,6 +35,7 @@ def main():
     parser.add_argument("-i", "--input-file", dest="input", required=True,
                     help="input file name", metavar="FILE")
     parser.add_argument("--ph", dest="ph", default=7, required=True, help="ph")
+    parser.add_argument("--server", dest="server", default='aws', required=False, help="server")
     parser.add_argument("--membrane-type", dest="membranetype", default='DOPC', required=True, help="membraneType")
     parser.add_argument("--temperature", dest="temperature", default=300, required=True, help="temperature")
     # parser.add_argument("--batch-size", dest="batchsize", default=2, help="size of batches")
@@ -43,9 +43,13 @@ def main():
     parser.add_argument("-o", "--output-file", dest="output", default='output.txt', required=True, help="output file name", metavar="FILE")
     parser.add_argument("-e", "--error-file", dest="error", default='error.txt', required=True, help="error file name", metavar="FILE")
 
-
     args = parser.parse_args()
 
+    if args.server == 'aws':
+        url = "https://memprot.org/cellpm"
+    else:
+        url = "https://cgopm.cc.lehigh.edu/cellpm"
+    
     logging.info(f"membrancetype={args.membranetype} temp={args.temperature} ph={args.ph}")
 
     if not os.path.exists(args.input):
@@ -66,7 +70,7 @@ def main():
             if os.path.exists(line):
                 logging.info(f"File={line}")
                 try:
-                    resp = request(line, args.membranetype, args.temperature, args.ph)
+                    resp = request(url, line, args.membranetype, args.temperature, args.ph)
                     resp_json = json.loads(resp.text)
                     if resp.status_code == 200:
                         logging.info(f"file={line} success response={resp_json['message']} resultUrl={resp_json['resultsUrl']}")
