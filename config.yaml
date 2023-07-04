@@ -1,6 +1,0 @@
-files:
-  -
-    pdbFile: /home/hoangnguyen/Downloads/1044.pdb
-    membraneType: DOPC
-    temperature: 300
-    ph: 7
